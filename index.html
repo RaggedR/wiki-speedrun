@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wiki Speedrun</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: #fafaf9;
+      color: #1a1a1a;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    /* ── Menu Screen ── */
+    #menu-screen {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    #menu-screen h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 1rem;
+      margin-bottom: 32px;
+    }
+
+    .setup-form { text-align: left; }
+
+    .search-field { margin-bottom: 16px; }
+
+    .search-field label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #555;
+    }
+
+    .search-container { position: relative; }
+
+    .search-container input {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+      background: white;
+    }
+
+    .search-container input:focus { border-color: #2563eb; }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      z-index: 100;
+      display: none;
+    }
+
+    .autocomplete-dropdown.show { display: block; }
+
+    .autocomplete-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: background 0.1s;
+      font-size: 0.95rem;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.highlighted { background: #f0f0ff; }
+
+    .selected-article {
+      margin-top: 6px;
+      font-size: 0.85rem;
+      color: #2563eb;
+      font-weight: 500;
+      min-height: 1.3em;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      padding: 14px 20px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      margin-top: 12px;
+    }
+
+    #start-btn { background: #2563eb; color: white; }
+    #start-btn:disabled { background: #b0b0b0; cursor: not-allowed; }
+    #start-btn:not(:disabled):hover { background: #1d4ed8; }
+
+    #random-btn { background: #f0f0f0; color: #333; }
+    #random-btn:hover { background: #e0e0e0; }
+
+    /* ── Playing Screen ── */
+    #play-screen { min-height: 100vh; }
+
+    .game-header {
+      position: sticky;
+      top: 0;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      z-index: 50;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      gap: 12px;
+    }
+
+    .target-banner {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #666;
+      flex-shrink: 1;
+      min-width: 0;
+    }
+
+    .target-banner span {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .timer { font-variant-numeric: tabular-nums; }
+
+    .give-up-btn {
+      all: unset;
+      font-size: 0.8rem;
+      color: #999;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-weight: 500;
+      transition: all 0.15s;
+      width: auto;
+      display: inline;
+      margin: 0;
+    }
+
+    .give-up-btn:hover { color: #dc2626; background: #fef2f2; }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 8px 20px;
+      overflow-x: auto;
+      white-space: nowrap;
+      font-size: 0.85rem;
+      border-top: 1px solid #f0f0f0;
+      scrollbar-width: thin;
+    }
+
+    .breadcrumb {
+      color: #2563eb;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .breadcrumb:hover { text-decoration: underline; }
+
+    .breadcrumb.current {
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: default;
+    }
+
+    .breadcrumb.current:hover { text-decoration: none; }
+
+    .breadcrumb-sep {
+      color: #ccc;
+      flex-shrink: 0;
+      margin: 0 2px;
+    }
+
+    .article-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 16px 20px 80px;
+    }
+
+    #article-title {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #eee;
+    }
+
+    /* Float containment — creates block formatting context */
+    #article-content { overflow: hidden; }
+
+    /* ── Article Content Styles ── */
+    #article-content h2 {
+      font-size: 1.5rem;
+      margin: 32px 0 12px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 6px;
+    }
+
+    #article-content h3 { font-size: 1.2rem; margin: 24px 0 8px; }
+    #article-content h4 { font-size: 1.05rem; margin: 20px 0 6px; font-weight: 600; }
+    #article-content p { margin: 0 0 16px; }
+
+    #article-content a { color: #2563eb; text-decoration: none; }
+    #article-content a:hover { text-decoration: underline; }
+    #article-content a.new { color: #aaa; cursor: default; }
+    #article-content a.new:hover { text-decoration: none; }
+
+    #article-content img { max-width: 100%; height: auto; }
+
+    /* Infobox — keep Wikipedia's inline float/width, just style the borders */
+    #article-content .infobox {
+      font-size: 0.85rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      background: #fafafa;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+
+    #article-content .infobox th,
+    #article-content .infobox td {
+      padding: 4px 8px;
+      border-bottom: 1px solid #eee;
+      vertical-align: top;
+    }
+
+    #article-content .infobox img { max-width: 100%; height: auto; }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin: 16px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #article-content table {
+      border-collapse: collapse;
+    }
+
+    #article-content .wikitable {
+      width: 100%;
+    }
+
+    #article-content .wikitable th,
+    #article-content .wikitable td,
+    #article-content table:not(.infobox) th,
+    #article-content table:not(.infobox) td {
+      border: 1px solid #ddd;
+      padding: 6px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    #article-content .wikitable th,
+    #article-content table:not(.infobox) th { background: #f5f5f5; }
+
+    #article-content .wikitable tr:nth-child(even),
+    #article-content table:not(.infobox) tr:nth-child(even) { background: #fafafa; }
+
+    /* Thumbnails — let Wikipedia's inline styles handle sizing/float */
+    #article-content .thumbinner {
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      background: #fafafa;
+      max-width: 100%;
+    }
+
+    #article-content .thumbcaption {
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      color: #666;
+      font-style: italic;
+    }
+
+    #article-content .thumbimage img { max-width: 100%; height: auto; }
+
+    /* Figure elements (modern Wikipedia image markup) */
+    #article-content figure {
+      margin: 8px 0;
+    }
+
+    #article-content figure img { max-width: 100%; height: auto; }
+
+    #article-content figcaption {
+      font-size: 0.8rem;
+      color: #666;
+      font-style: italic;
+      padding: 4px 0;
+    }
+
+    #article-content .hatnote {
+      font-style: italic;
+      color: #666;
+      margin-bottom: 16px;
+      padding: 8px 12px;
+      background: #f8f8f8;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    #article-content ul,
+    #article-content ol { margin: 0 0 16px 24px; }
+
+    #article-content li { margin-bottom: 4px; }
+
+    #article-content blockquote {
+      border-left: 3px solid #e0e0e0;
+      margin: 16px 0;
+      padding: 8px 16px;
+      color: #444;
+    }
+
+    #article-content dd { margin-left: 24px; margin-bottom: 4px; }
+
+    /* Hide Wikipedia chrome */
+    #article-content .navbox,
+    #article-content .catlinks,
+    #article-content .metadata,
+    #article-content .sistersitebox,
+    #article-content .side-box,
+    #article-content .noprint,
+    #article-content .mw-empty-elt,
+    #article-content .mw-editsection,
+    #article-content .authority-control,
+    #article-content .portalbox,
+    #article-content .navbar,
+    #article-content .shortdescription,
+    #article-content .toc { display: none !important; }
+
+    /* ── Loading ── */
+    .loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      color: #999;
+    }
+
+    .loading.show { display: flex; }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f0f0f0;
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error State ── */
+    .error-msg {
+      text-align: center;
+      padding: 60px 20px;
+      color: #dc2626;
+    }
+
+    .error-msg button {
+      display: inline-block;
+      width: auto;
+      margin-top: 16px;
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      background: #f0f0f0;
+      color: #333;
+      border-radius: 6px;
+    }
+
+    /* ── Warmer Indicator ── */
+    .warmer-indicator {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fef3c7;
+      color: #92400e;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      animation: pulse 2s ease-in-out infinite;
+      z-index: 100;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    /* ── Victory Screen ── */
+    #victory-screen {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    #victory-screen h1 {
+      font-size: 2.5rem;
+      margin-bottom: 32px;
+    }
+
+    .victory-stats {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 40px;
+    }
+
+    .stat { display: flex; flex-direction: column; }
+
+    .stat-value { font-size: 2rem; font-weight: 800; }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .path-display {
+      text-align: left;
+      margin-bottom: 40px;
+    }
+
+    .path-display h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+    }
+
+    .path-display ol {
+      list-style: decimal;
+      padding-left: 24px;
+    }
+
+    .path-display li { padding: 4px 0; }
+
+    .path-display li:first-child { color: #2563eb; font-weight: 600; }
+    .path-display li:last-child { color: #dc2626; font-weight: 600; }
+
+    /* ── History ── */
+    #history-section {
+      margin-top: 48px;
+      text-align: left;
+    }
+
+    #history-section h2 {
+      font-size: 1.2rem;
+      margin-bottom: 12px;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9rem;
+      gap: 12px;
+    }
+
+    .history-route {
+      font-weight: 500;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-stats {
+      color: #666;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .clear-history {
+      all: unset;
+      font-size: 0.8rem;
+      color: #999;
+      cursor: pointer;
+      float: right;
+      margin: 0;
+      padding: 0;
+      width: auto;
+      display: inline;
+    }
+
+    .clear-history:hover { color: #dc2626; }
+
+    /* ── Peek Modal ── */
+    .peek-btn {
+      all: unset;
+      font-size: 0.8rem;
+      color: #2563eb;
+      cursor: pointer;
+      padding: 2px 8px;
+      border: 1px solid #2563eb;
+      border-radius: 4px;
+      font-weight: 500;
+      width: auto;
+      display: inline;
+      margin: 0 0 0 8px;
+    }
+
+    .peek-btn:hover { background: #eff6ff; }
+
+    .peek-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .peek-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .peek-content {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      max-width: 800px;
+      width: 90vw;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .peek-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #dc2626;
+    }
+
+    .peek-header h2 {
+      font-size: 1.5rem;
+      margin: 0;
+      color: #dc2626;
+    }
+
+    .peek-close {
+      all: unset;
+      font-size: 1.8rem;
+      cursor: pointer;
+      padding: 0 8px;
+      border-radius: 4px;
+      color: #666;
+      width: auto;
+      display: inline;
+      margin: 0;
+      line-height: 1;
+    }
+
+    .peek-close:hover { background: #f0f0f0; color: #333; }
+
+    .peek-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: white;
+      background: #dc2626;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-bottom: 8px;
+    }
+
+    /* Disable links inside peek (read-only view) */
+    .peek-body a {
+      color: #888 !important;
+      cursor: default !important;
+      pointer-events: none;
+    }
+
+    /* Reuse article styles inside peek */
+    .peek-body h2 { font-size: 1.3rem; margin: 24px 0 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+    .peek-body h3 { font-size: 1.1rem; margin: 16px 0 6px; }
+    .peek-body p { margin: 0 0 12px; }
+    .peek-body img { max-width: 100%; height: auto; }
+    .peek-body ul, .peek-body ol { margin: 0 0 12px 24px; }
+    .peek-body .infobox { float: right; clear: right; margin: 0 0 12px 16px; max-width: 260px; font-size: 0.8rem; border: 1px solid #e0e0e0; border-radius: 4px; background: #fafafa; border-collapse: collapse; }
+    .peek-body .infobox th, .peek-body .infobox td { padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+    .peek-body .infobox img { max-width: 220px; }
+    .peek-body .thumb { margin: 8px 0; }
+    .peek-body .thumb.tright { float: right; clear: right; margin: 0 0 12px 16px; }
+    .peek-body .thumbinner { max-width: 260px; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden; background: #fafafa; }
+    .peek-body .thumbcaption { padding: 4px 6px; font-size: 0.75rem; color: #666; font-style: italic; }
+    .peek-body .navbox, .peek-body .catlinks, .peek-body .metadata,
+    .peek-body .noprint, .peek-body .mw-empty-elt, .peek-body .toc { display: none !important; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      #menu-screen { padding: 32px 16px; }
+      #menu-screen h1 { font-size: 2rem; }
+      .subtitle { margin-bottom: 28px; }
+
+      .header-top {
+        flex-wrap: wrap;
+        padding: 6px 12px;
+        gap: 4px;
+      }
+
+      .target-banner { width: 100%; font-size: 0.85rem; }
+
+      .stats { font-size: 0.85rem; gap: 10px; }
+
+      .breadcrumbs { padding: 4px 12px; font-size: 0.8rem; }
+
+      .article-container { padding: 10px 12px 60px; }
+      #article-title { font-size: 1.4rem; margin-bottom: 8px; }
+
+      .victory-stats { gap: 20px; }
+      .stat-value { font-size: 1.5rem; }
+
+      /* Unfloat infoboxes and images on narrow screens */
+      #article-content .infobox {
+        float: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 0 12px !important;
+      }
+
+      #article-content .thumb,
+      #article-content figure[typeof] {
+        float: none !important;
+        margin: 12px 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      #article-content .thumbinner {
+        max-width: 100%;
+        margin: 0 auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+
+    <!-- ── Menu Screen ── -->
+    <div id="menu-screen" class="screen active">
+      <h1>Wiki Speedrun</h1>
+      <p class="subtitle">Navigate from one Wikipedia article to another using only links</p>
+
+      <div class="setup-form">
+        <div class="search-field">
+          <label for="start-input">Start Article</label>
+          <div class="search-container">
+            <input type="text" id="start-input" placeholder="Search Wikipedia..." autocomplete="off">
+            <div class="autocomplete-dropdown" id="start-dropdown"></div>
+          </div>
+          <div class="selected-article" id="start-selected"></div>
+        </div>
+
+        <div class="search-field">
+          <label for="end-input">Target Article</label>
+          <div class="search-container">
+            <input type="text" id="end-input" placeholder="Search Wikipedia..." autocomplete="off">
+            <div class="autocomplete-dropdown" id="end-dropdown"></div>
+          </div>
+          <div class="selected-article" id="end-selected"></div>
+        </div>
+
+        <button id="start-btn" disabled>Start Speedrun</button>
+        <button id="random-btn">Random Challenge</button>
+      </div>
+
+      <div id="history-section" style="display:none">
+        <h2>Past Runs <button class="clear-history" id="clear-history-btn">clear</button></h2>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- ── Playing Screen ── -->
+    <div id="play-screen" class="screen">
+      <div class="game-header">
+        <div class="header-top">
+          <div class="target-banner">TARGET: <span id="target-title"></span><button class="peek-btn" id="peek-btn">Peek</button></div>
+          <div class="stats">
+            <span class="timer" id="timer">0:00.0</span>
+            <span class="clicks" id="click-count">0 clicks</span>
+            <button class="give-up-btn" id="give-up-btn">Give up</button>
+          </div>
+        </div>
+        <div class="breadcrumbs" id="breadcrumbs"></div>
+      </div>
+
+      <div class="article-container">
+        <div class="loading" id="loading">
+          <div class="spinner"></div>
+          <p>Loading article...</p>
+        </div>
+        <h1 id="article-title"></h1>
+        <div id="article-content"></div>
+      </div>
+
+      <div class="warmer-indicator" id="warmer" style="display:none">
+        The target is linked from this page!
+      </div>
+
+      <!-- Peek Modal -->
+      <div id="peek-modal" class="peek-modal" style="display:none">
+        <div class="peek-overlay" id="peek-overlay"></div>
+        <div class="peek-content">
+          <div class="peek-header">
+            <div>
+              <span class="peek-label">Target</span>
+              <h2 id="peek-title"></h2>
+            </div>
+            <button class="peek-close" id="peek-close">&times;</button>
+          </div>
+          <div class="peek-body" id="peek-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Victory Screen ── -->
+    <div id="victory-screen" class="screen">
+      <h1>You made it!</h1>
+      <div class="victory-stats">
+        <div class="stat">
+          <span class="stat-value" id="v-time"></span>
+          <span class="stat-label">Time</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="v-clicks"></span>
+          <span class="stat-label">Clicks</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="v-path-length"></span>
+          <span class="stat-label">Articles</span>
+        </div>
+      </div>
+
+      <div class="path-display">
+        <h2>Your Path</h2>
+        <ol id="v-path"></ol>
+      </div>
+
+      <button id="play-again-btn">Play Again</button>
+    </div>
+
+  </div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ─── Utilities ───
+
+    function escapeHTML(str) {
+      const el = document.createElement('span');
+      el.textContent = str;
+      return el.innerHTML;
+    }
+
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      const tenths = Math.floor((ms % 1000) / 100);
+      return min + ':' + String(sec).padStart(2, '0') + '.' + tenths;
+    }
+
+    function normalizeTitle(title) {
+      return decodeURIComponent((title || '').replace(/_/g, ' ')).trim();
+    }
+
+    function titlesMatch(a, b) {
+      return normalizeTitle(a).toLowerCase() === normalizeTitle(b).toLowerCase();
+    }
+
+    // Namespaces to skip when intercepting links
+    var SKIP_NS = new Set([
+      'File', 'Wikipedia', 'Help', 'Template', 'Category',
+      'Portal', 'Special', 'Talk', 'User', 'Module', 'Draft',
+      'MediaWiki', 'TimedText', 'Book'
+    ]);
+
+    // Sections to strip from article HTML
+    var STRIP_SECTIONS = new Set([
+      'see also', 'references', 'external links', 'further reading',
+      'notes', 'bibliography', 'citations', 'sources'
+    ]);
+
+    // ─── Wikipedia API ───
+
+    function createWikiAPI() {
+      var API = 'https://en.wikipedia.org/w/api.php';
+      var cache = new Map();
+
+      function processHTML(raw) {
+        var doc = new DOMParser().parseFromString(raw, 'text/html');
+        var root = doc.querySelector('.mw-parser-output') || doc.body;
+
+        // Remove edit section links
+        root.querySelectorAll('.mw-editsection').forEach(function(el) { el.remove(); });
+
+        // Remove reference markers [1][2]
+        root.querySelectorAll('sup.reference').forEach(function(el) { el.remove(); });
+
+        // Remove inline styles & TemplateStyles
+        root.querySelectorAll('style, link[rel="mw-deduplicated-inline-style"]').forEach(function(el) { el.remove(); });
+
+        // Remove Wikipedia chrome elements
+        root.querySelectorAll(
+          '.navbox, .catlinks, .metadata, .sistersitebox, .side-box, ' +
+          '.noprint, .authority-control, .portalbox, .navbar, ' +
+          '.mw-empty-elt, .shortdescription, .toc'
+        ).forEach(function(el) { el.remove(); });
+
+        // Remove unwanted sections (See also, References, etc.)
+        root.querySelectorAll('h2').forEach(function(h2) {
+          var headline = h2.querySelector('.mw-headline');
+          var text = (headline ? headline.textContent : h2.textContent).trim().toLowerCase();
+          if (STRIP_SECTIONS.has(text)) {
+            // Remove everything from this h2 until the next h2 or end
+            var node = h2.nextSibling;
+            while (node) {
+              var next = node.nextSibling;
+              if (node.nodeType === 1 && node.tagName === 'H2') break;
+              node.remove();
+              node = next;
+            }
+            h2.remove();
+          }
+        });
+
+        // Remove empty paragraphs
+        root.querySelectorAll('p').forEach(function(p) {
+          if (!p.textContent.trim() && !p.querySelector('img')) p.remove();
+        });
+
+        // Fix protocol-relative URLs → absolute https
+        // (required for file:// local serving; harmless when served via https)
+        root.querySelectorAll('img').forEach(function(img) {
+          var src = img.getAttribute('src');
+          if (src && src.startsWith('//')) {
+            img.setAttribute('src', 'https:' + src);
+          }
+          var srcset = img.getAttribute('srcset');
+          if (srcset) {
+            img.setAttribute('srcset', srcset.replace(/(^|\s)\/\//g, '$1https://'));
+          }
+        });
+
+        root.querySelectorAll('a').forEach(function(a) {
+          var href = a.getAttribute('href');
+          if (href && href.startsWith('//')) {
+            a.setAttribute('href', 'https:' + href);
+          }
+        });
+
+        // Wrap top-level tables in scrollable containers
+        root.querySelectorAll('table').forEach(function(table) {
+          // Skip tables nested inside other tables
+          if (table.parentNode.closest && table.parentNode.closest('table')) return;
+          var wrapper = doc.createElement('div');
+          wrapper.className = 'table-wrap';
+          table.parentNode.insertBefore(wrapper, table);
+          wrapper.appendChild(table);
+        });
+
+        // Strip only TemplateStyles background colors on divs/spans
+        // (keep all layout-relevant inline styles — width, float, etc.)
+        root.querySelectorAll('div[style], span[style]').forEach(function(el) {
+          var s = el.getAttribute('style');
+          // Only strip if it's purely cosmetic (background/font overrides)
+          if (s && !/width|float|display|position|clear|margin|padding|max-|min-/i.test(s)) {
+            el.removeAttribute('style');
+          }
+        });
+
+        return root.innerHTML;
+      }
+
+      async function fetchArticle(title) {
+        var norm = normalizeTitle(title);
+        if (cache.has(norm)) return cache.get(norm);
+
+        var url = API + '?action=parse&page=' + encodeURIComponent(title) +
+          '&prop=text|displaytitle&format=json&origin=*&redirects=1';
+
+        var res = await fetch(url);
+        if (!res.ok) throw new Error('Network error (' + res.status + ')');
+
+        var data = await res.json();
+        if (data.error) throw new Error(data.error.info || 'Article not found');
+
+        var result = {
+          title: data.parse.title,
+          html: processHTML(data.parse.text['*'])
+        };
+
+        // Cache under both the requested title and the canonical title
+        cache.set(norm, result);
+        cache.set(normalizeTitle(result.title), result);
+        return result;
+      }
+
+      async function search(query) {
+        if (!query || query.trim().length < 2) return [];
+        var url = API + '?action=opensearch&search=' + encodeURIComponent(query) +
+          '&limit=8&format=json&origin=*';
+        var res = await fetch(url);
+        var data = await res.json();
+        return data[1] || [];
+      }
+
+      // Curated pool of universally recognisable Wikipedia topics.
+      // Pick two at random — zero API calls, instant, always well-known.
+      var WELL_KNOWN = [
+        // Countries & regions
+        'United States','United Kingdom','France','Germany','Japan','China','India','Brazil',
+        'Australia','Canada','Mexico','Italy','Spain','Russia','South Korea','Egypt',
+        'South Africa','Argentina','Nigeria','Turkey','Indonesia','Saudi Arabia','Greece',
+        'Ireland','Sweden','Norway','Switzerland','Netherlands','Poland','Thailand',
+        'New Zealand','Israel','Kenya','Colombia','Peru','Vietnam','Philippines','Pakistan',
+        'Iran','Cuba','Jamaica','Iceland','Portugal','Austria','Belgium','Denmark',
+        'Scotland','Ukraine','Czech Republic','Hungary',
+        // Cities
+        'New York City','London','Paris','Tokyo','Rome','Berlin','Sydney','Moscow',
+        'Beijing','Mumbai','Cairo','Istanbul','Rio de Janeiro','Toronto','Los Angeles',
+        'Chicago','San Francisco','Dubai','Singapore','Hong Kong','Bangkok','Amsterdam',
+        'Barcelona','Prague','Vienna','Athens','Jerusalem','Venice','Hollywood',
+        // Famous people — historical
+        'Albert Einstein','Isaac Newton','Leonardo da Vinci','William Shakespeare',
+        'Cleopatra','Julius Caesar','Napoleon','Abraham Lincoln','Mahatma Gandhi',
+        'Martin Luther King Jr.','Nelson Mandela','Marie Curie','Charles Darwin',
+        'Galileo Galilei','Nikola Tesla','Alexander the Great','Queen Victoria',
+        'Winston Churchill','Mozart','Ludwig van Beethoven','Aristotle','Plato',
+        'Genghis Khan','Marco Polo','Christopher Columbus','Frida Kahlo',
+        'Michelangelo','Pythagoras','Archimedes','Confucius',
+        // Famous people — modern
+        'Barack Obama','Elon Musk','Taylor Swift','Beyoncé','Michael Jordan',
+        'Oprah Winfrey','Steve Jobs','Bill Gates','Stephen Hawking','J. K. Rowling',
+        'Cristiano Ronaldo','Lionel Messi','Serena Williams','Muhammad Ali',
+        'Elvis Presley','The Beatles','Michael Jackson','Madonna','Bob Marley',
+        'David Bowie','Prince (musician)','Freddie Mercury','Adele',
+        // Animals
+        'Dog','Cat','Elephant','Lion','Tiger','Whale','Dolphin','Eagle','Shark',
+        'Penguin','Giraffe','Polar bear','Octopus','Gorilla','Wolf','Horse',
+        'Cheetah','Panda','Crocodile','Owl','Butterfly','Dinosaur','Tyrannosaurus',
+        'Blue whale','Great white shark','Honey bee','Chimpanzee','Red fox',
+        // Science & nature
+        'Sun','Moon','Earth','Mars','Jupiter','Saturn','Black hole','Milky Way',
+        'DNA','Evolution','Atom','Electricity','Gravity','Speed of light',
+        'Photosynthesis','Volcano','Earthquake','Tsunami','Climate change',
+        'Solar System','Big Bang','Periodic table','Quantum mechanics',
+        'Theory of relativity','Plate tectonics','Antibiotic','Vaccine',
+        // History & events
+        'World War I','World War II','Cold War','French Revolution',
+        'American Revolution','Ancient Rome','Ancient Egypt','Ancient Greece',
+        'Renaissance','Industrial Revolution','Space Race','Moon landing',
+        'Fall of the Berlin Wall','Titanic','Black Death','Silk Road',
+        'Roman Empire','Ottoman Empire','British Empire','Viking',
+        // Geography & nature
+        'Mount Everest','Grand Canyon','Amazon River','Nile','Sahara',
+        'Pacific Ocean','Atlantic Ocean','Great Barrier Reef','Amazon rainforest',
+        'Antarctica','Arctic','Mediterranean Sea','Niagara Falls','Dead Sea',
+        'Mariana Trench','Yellowstone National Park','Galápagos Islands',
+        // Food & drink
+        'Pizza','Chocolate','Coffee','Tea','Sushi','Bread','Rice','Cheese',
+        'Wine','Beer','Pasta','Banana','Apple','Tomato','Potato','Olive oil',
+        'Honey','Cinnamon','Vanilla','Sugar',
+        // Technology & inventions
+        'Internet','Computer','Telephone','Television','Airplane',
+        'Automobile','Printing press','Steam engine','Telescope','Microscope',
+        'Artificial intelligence','Robot','Satellite','Nuclear weapon',
+        'Smartphone','World Wide Web','GPS','Bicycle','Camera','Radio',
+        // Arts & culture
+        'Mona Lisa','Harry Potter','Star Wars','The Lord of the Rings',
+        'Bible','Quran','Olympics','FIFA World Cup','Super Bowl',
+        'Chess','Piano','Guitar','Ballet','Opera','Hip hop','Jazz',
+        'Rock and roll','Cinema','Animation','Photography','Graffiti',
+        // Concepts
+        'Democracy','Capitalism','Communism','Philosophy','Mathematics',
+        'Psychology','Language','Music','Religion','Mythology',
+        'Human rights','United Nations','European Union','NATO',
+        // Buildings & landmarks
+        'Great Wall of China','Eiffel Tower','Statue of Liberty','Pyramids of Giza',
+        'Colosseum','Taj Mahal','Machu Picchu','Stonehenge','Big Ben',
+        'Golden Gate Bridge','Sydney Opera House','Parthenon',
+        // Body & health
+        'Human brain','Heart','Cancer','Virus','Bacteria','Blood',
+        'Oxygen','Water','Carbon dioxide','Sleep',
+        // Sports
+        'Football','Basketball','Tennis','Cricket','Baseball','Golf',
+        'Swimming','Marathon','Boxing','Surfing','Skateboarding',
+        // Miscellaneous
+        'Gold','Diamond','Oil','Iron','Silk','Cotton','Paper','Glass',
+        'Fire','Lightning','Rainbow','Aurora','Coral reef','Fossil'
+      ];
+
+      async function randomPair() {
+        var a = Math.floor(Math.random() * WELL_KNOWN.length);
+        var b;
+        do { b = Math.floor(Math.random() * WELL_KNOWN.length); } while (b === a);
+        return [WELL_KNOWN[a], WELL_KNOWN[b]];
+      }
+
+      function clearCache() { cache.clear(); }
+
+      return { fetchArticle: fetchArticle, search: search, randomPair: randomPair, clearCache: clearCache };
+    }
+
+    // ─── Game State Machine ───
+
+    function createGame() {
+      var state = {
+        phase: 'menu',
+        startArticle: null,
+        targetArticle: null,
+        path: [],
+        clickCount: 0,
+        startTime: null
+      };
+
+      function start(startTitle, targetTitle) {
+        state.phase = 'playing';
+        state.startArticle = startTitle;
+        state.targetArticle = targetTitle;
+        state.path = [startTitle];
+        state.clickCount = 0;
+        state.startTime = Date.now();
+      }
+
+      function navigate(canonicalTitle) {
+        state.path.push(canonicalTitle);
+        state.clickCount++;
+      }
+
+      function backtrack(index) {
+        state.path = state.path.slice(0, index + 1);
+        state.clickCount++;
+      }
+
+      function updateCurrentTitle(canonicalTitle) {
+        if (state.path.length > 0) {
+          state.path[state.path.length - 1] = canonicalTitle;
+        }
+      }
+
+      function checkVictory(title) {
+        return titlesMatch(title, state.targetArticle);
+      }
+
+      function setVictory() { state.phase = 'victory'; }
+
+      function getElapsed() {
+        if (!state.startTime) return 0;
+        return Date.now() - state.startTime;
+      }
+
+      function reset() {
+        state.phase = 'menu';
+        state.startArticle = null;
+        state.targetArticle = null;
+        state.path = [];
+        state.clickCount = 0;
+        state.startTime = null;
+      }
+
+      function getState() {
+        return {
+          phase: state.phase,
+          startArticle: state.startArticle,
+          targetArticle: state.targetArticle,
+          path: state.path.slice(),
+          clickCount: state.clickCount,
+          startTime: state.startTime
+        };
+      }
+
+      return {
+        start: start, navigate: navigate, backtrack: backtrack,
+        updateCurrentTitle: updateCurrentTitle,
+        checkVictory: checkVictory, setVictory: setVictory,
+        getElapsed: getElapsed, reset: reset, getState: getState
+      };
+    }
+
+    // ─── Search Autocomplete ───
+
+    function createSearch(api, inputEl, dropdownEl, onSelect) {
+      var timer = null;
+      var results = [];
+      var highlightIdx = -1;
+
+      inputEl.addEventListener('input', function() {
+        onSelect(null);
+        clearTimeout(timer);
+        var q = inputEl.value.trim();
+        if (q.length < 2) { hide(); return; }
+        timer = setTimeout(async function() {
+          try {
+            results = await api.search(q);
+            render(results);
+          } catch (e) { hide(); }
+        }, 300);
+      });
+
+      inputEl.addEventListener('keydown', function(e) {
+        if (!results.length) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          highlightIdx = Math.min(highlightIdx + 1, results.length - 1);
+          updateHL();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          highlightIdx = Math.max(highlightIdx - 1, 0);
+          updateHL();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (highlightIdx >= 0) select(results[highlightIdx]);
+        } else if (e.key === 'Escape') {
+          hide();
+        }
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!inputEl.contains(e.target) && !dropdownEl.contains(e.target)) hide();
+      });
+
+      function render(items) {
+        if (!items.length) { hide(); return; }
+        highlightIdx = -1;
+        dropdownEl.innerHTML = items.map(function(t, i) {
+          return '<div class="autocomplete-item" data-i="' + i + '">' + escapeHTML(t) + '</div>';
+        }).join('');
+        dropdownEl.classList.add('show');
+        dropdownEl.querySelectorAll('.autocomplete-item').forEach(function(el) {
+          el.addEventListener('click', function() { select(items[+el.dataset.i]); });
+          el.addEventListener('mouseenter', function() { highlightIdx = +el.dataset.i; updateHL(); });
+        });
+      }
+
+      function updateHL() {
+        dropdownEl.querySelectorAll('.autocomplete-item').forEach(function(el, i) {
+          el.classList.toggle('highlighted', i === highlightIdx);
+        });
+      }
+
+      function select(title) {
+        inputEl.value = title;
+        hide();
+        onSelect(title);
+      }
+
+      function hide() {
+        dropdownEl.classList.remove('show');
+        results = [];
+        highlightIdx = -1;
+      }
+
+      function clear() {
+        inputEl.value = '';
+        hide();
+        onSelect(null);
+      }
+
+      return { clear: clear };
+    }
+
+    // ─── Run History (localStorage) ───
+
+    function createHistory() {
+      var KEY = 'wiki-speedrun-history';
+
+      function save(run) {
+        var runs = getAll();
+        runs.unshift(run);
+        if (runs.length > 50) runs.length = 50;
+        try { localStorage.setItem(KEY, JSON.stringify(runs)); } catch (e) {}
+      }
+
+      function getAll() {
+        try { return JSON.parse(localStorage.getItem(KEY)) || []; }
+        catch (e) { return []; }
+      }
+
+      function clear() {
+        try { localStorage.removeItem(KEY); } catch (e) {}
+      }
+
+      return { save: save, getAll: getAll, clear: clear };
+    }
+
+    // ─── App Initialization ───
+
+    function init() {
+      var api = createWikiAPI();
+      var game = createGame();
+      var history = createHistory();
+
+      // DOM refs
+      var menuScreen    = document.getElementById('menu-screen');
+      var playScreen    = document.getElementById('play-screen');
+      var victoryScreen = document.getElementById('victory-screen');
+      var startBtn      = document.getElementById('start-btn');
+      var randomBtn     = document.getElementById('random-btn');
+      var startInput    = document.getElementById('start-input');
+      var endInput      = document.getElementById('end-input');
+      var startDrop     = document.getElementById('start-dropdown');
+      var endDrop       = document.getElementById('end-dropdown');
+      var startSel      = document.getElementById('start-selected');
+      var endSel        = document.getElementById('end-selected');
+      var targetTitleEl = document.getElementById('target-title');
+      var timerEl       = document.getElementById('timer');
+      var clickCountEl  = document.getElementById('click-count');
+      var breadcrumbsEl = document.getElementById('breadcrumbs');
+      var articleTitle  = document.getElementById('article-title');
+      var articleContent = document.getElementById('article-content');
+      var loadingEl     = document.getElementById('loading');
+      var warmerEl      = document.getElementById('warmer');
+      var giveUpBtn     = document.getElementById('give-up-btn');
+      var historySection = document.getElementById('history-section');
+      var historyList   = document.getElementById('history-list');
+      var playAgainBtn  = document.getElementById('play-again-btn');
+      var clearHistBtn  = document.getElementById('clear-history-btn');
+      var peekBtn       = document.getElementById('peek-btn');
+      var peekModal     = document.getElementById('peek-modal');
+      var peekOverlay   = document.getElementById('peek-overlay');
+      var peekClose     = document.getElementById('peek-close');
+      var peekTitle     = document.getElementById('peek-title');
+      var peekBody      = document.getElementById('peek-body');
+
+      var timerInterval = null;
+      var selectedStart = null;
+      var selectedEnd = null;
+
+      // ── Search wiring ──
+
+      var startSearch = createSearch(api, startInput, startDrop, function(title) {
+        selectedStart = title;
+        startSel.textContent = title ? 'Selected: ' + title : '';
+        updateStartBtn();
+      });
+
+      var endSearch = createSearch(api, endInput, endDrop, function(title) {
+        selectedEnd = title;
+        endSel.textContent = title ? 'Selected: ' + title : '';
+        updateStartBtn();
+      });
+
+      function updateStartBtn() {
+        startBtn.disabled = !(selectedStart && selectedEnd);
+      }
+
+      // ── Screen management ──
+
+      function showScreen(name) {
+        menuScreen.classList.toggle('active', name === 'menu');
+        playScreen.classList.toggle('active', name === 'playing');
+        victoryScreen.classList.toggle('active', name === 'victory');
+      }
+
+      // ── Game controls ──
+
+      startBtn.addEventListener('click', function() {
+        if (selectedStart && selectedEnd) {
+          if (titlesMatch(selectedStart, selectedEnd)) {
+            alert('Start and target must be different articles!');
+            return;
+          }
+          beginGame(selectedStart, selectedEnd);
+        }
+      });
+
+      randomBtn.addEventListener('click', async function() {
+        randomBtn.disabled = true;
+        randomBtn.textContent = 'Finding articles...';
+        try {
+          var pair = await api.randomPair();
+          beginGame(pair[0], pair[1]);
+        } catch (e) {
+          alert('Failed to get random articles. Try again.');
+        } finally {
+          randomBtn.disabled = false;
+          randomBtn.textContent = 'Random Challenge';
+        }
+      });
+
+      giveUpBtn.addEventListener('click', function() {
+        if (confirm('Give up this run?')) {
+          stopTimer();
+          game.reset();
+          api.clearCache();
+          resetMenu();
+          showScreen('menu');
+        }
+      });
+
+      playAgainBtn.addEventListener('click', function() {
+        game.reset();
+        api.clearCache();
+        resetMenu();
+        showScreen('menu');
+      });
+
+      clearHistBtn.addEventListener('click', function() {
+        history.clear();
+        renderHistory();
+      });
+
+      // ── Peek at target ──
+
+      peekBtn.addEventListener('click', async function() {
+        peekBtn.disabled = true;
+        peekBtn.textContent = 'Loading...';
+        try {
+          var article = await api.fetchArticle(game.getState().targetArticle);
+          peekTitle.textContent = article.title;
+          peekBody.innerHTML = article.html;
+          peekModal.style.display = 'flex';
+        } catch (e) {
+          alert('Could not load target article: ' + e.message);
+        } finally {
+          peekBtn.disabled = false;
+          peekBtn.textContent = 'Peek';
+        }
+      });
+
+      function closePeek() { peekModal.style.display = 'none'; }
+      peekClose.addEventListener('click', closePeek);
+      peekOverlay.addEventListener('click', closePeek);
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && peekModal.style.display === 'flex') closePeek();
+      });
+
+      // ── Game flow ──
+
+      async function beginGame(start, target) {
+        game.start(start, target);
+        showScreen('playing');
+        targetTitleEl.textContent = target;
+        warmerEl.style.display = 'none';
+
+        startTimer();
+        await loadArticle(start, true);
+      }
+
+      async function loadArticle(rawTitle, isInitial) {
+        showLoading(true);
+        warmerEl.style.display = 'none';
+
+        try {
+          var article = await api.fetchArticle(rawTitle);
+
+          // Update path with canonical title
+          if (isInitial) {
+            game.updateCurrentTitle(article.title);
+          }
+
+          // Check victory
+          if (game.checkVictory(article.title)) {
+            game.setVictory();
+            finishGame();
+            return;
+          }
+
+          // Render
+          articleTitle.textContent = article.title;
+          articleContent.innerHTML = article.html;
+          showLoading(false);
+
+          renderBreadcrumbs();
+          updateStats();
+          window.scrollTo(0, 0);
+          checkWarmer();
+
+        } catch (e) {
+          showError(e.message);
+        }
+      }
+
+      // ── Link interception ──
+
+      articleContent.addEventListener('click', function(e) {
+        var link = e.target.closest('a');
+        if (!link) return;
+
+        e.preventDefault();
+        var href = link.getAttribute('href');
+        if (!href || !href.startsWith('/wiki/')) return;
+
+        // Skip red links
+        if (link.classList.contains('new')) return;
+
+        // Skip self-links
+        if (link.classList.contains('mw-selflink')) return;
+
+        // Extract title, strip fragment
+        var title = decodeURIComponent(href.slice(6).split('#')[0]).replace(/_/g, ' ');
+
+        // Skip non-article namespaces
+        if (title.includes(':')) {
+          var ns = title.split(':')[0];
+          if (SKIP_NS.has(ns)) return;
+        }
+
+        // Navigate
+        navigateToArticle(title);
+      });
+
+      async function navigateToArticle(rawTitle) {
+        showLoading(true);
+        warmerEl.style.display = 'none';
+
+        try {
+          var article = await api.fetchArticle(rawTitle);
+          game.navigate(article.title);
+
+          if (game.checkVictory(article.title)) {
+            game.setVictory();
+            finishGame();
+            return;
+          }
+
+          articleTitle.textContent = article.title;
+          articleContent.innerHTML = article.html;
+          showLoading(false);
+
+          renderBreadcrumbs();
+          updateStats();
+          window.scrollTo(0, 0);
+          checkWarmer();
+
+        } catch (e) {
+          showError(e.message);
+        }
+      }
+
+      // ── Breadcrumbs ──
+
+      function renderBreadcrumbs() {
+        var s = game.getState();
+        var html = '';
+        for (var i = 0; i < s.path.length; i++) {
+          if (i > 0) html += '<span class="breadcrumb-sep">&rarr;</span>';
+          if (i === s.path.length - 1) {
+            html += '<span class="breadcrumb current">' + escapeHTML(s.path[i]) + '</span>';
+          } else {
+            html += '<span class="breadcrumb" data-idx="' + i + '">' + escapeHTML(s.path[i]) + '</span>';
+          }
+        }
+        breadcrumbsEl.innerHTML = html;
+
+        // Backtracking click handlers
+        breadcrumbsEl.querySelectorAll('.breadcrumb[data-idx]').forEach(function(el) {
+          el.addEventListener('click', function() {
+            var idx = parseInt(el.dataset.idx);
+            var title = game.getState().path[idx];
+            game.backtrack(idx);
+            loadArticle(title, false);
+          });
+        });
+
+        // Scroll breadcrumbs to end
+        breadcrumbsEl.scrollLeft = breadcrumbsEl.scrollWidth;
+      }
+
+      // ── Stats ──
+
+      function updateStats() {
+        var s = game.getState();
+        clickCountEl.textContent = s.clickCount + ' click' + (s.clickCount !== 1 ? 's' : '');
+      }
+
+      // ── Timer ──
+
+      function startTimer() {
+        stopTimer();
+        timerEl.textContent = '0:00.0';
+        timerInterval = setInterval(function() {
+          timerEl.textContent = formatTime(game.getElapsed());
+        }, 100);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      // ── "Getting Warmer" indicator ──
+
+      function checkWarmer() {
+        var s = game.getState();
+        var targetNorm = normalizeTitle(s.targetArticle).toLowerCase();
+        var links = articleContent.querySelectorAll('a[href^="/wiki/"]');
+        var found = false;
+        for (var i = 0; i < links.length; i++) {
+          var href = links[i].getAttribute('href');
+          var t = normalizeTitle(href.slice(6).split('#')[0]).toLowerCase();
+          if (t === targetNorm) { found = true; break; }
+        }
+        warmerEl.style.display = found ? 'block' : 'none';
+      }
+
+      // ── Loading / Error ──
+
+      function showLoading(show) {
+        loadingEl.classList.toggle('show', show);
+        if (show) {
+          articleTitle.style.display = 'none';
+          articleContent.style.display = 'none';
+          // Restore default loading content if it was replaced by an error
+          loadingEl.innerHTML = '<div class="spinner"></div><p>Loading article...</p>';
+        } else {
+          articleTitle.style.display = '';
+          articleContent.style.display = '';
+        }
+      }
+
+      function showError(msg) {
+        loadingEl.classList.add('show');
+        articleTitle.style.display = 'none';
+        articleContent.style.display = 'none';
+        loadingEl.innerHTML =
+          '<div class="error-msg">' +
+            '<p>Failed to load article: ' + escapeHTML(msg) + '</p>' +
+            '<button id="err-back-btn">Go back</button>' +
+          '</div>';
+        document.getElementById('err-back-btn').addEventListener('click', function() {
+          var s = game.getState();
+          if (s.path.length > 1) {
+            // Pop the failed navigation (if it was added) and go back
+            var lastTitle = s.path[s.path.length - 1];
+            loadArticle(lastTitle, false);
+          } else {
+            loadArticle(s.startArticle, false);
+          }
+        });
+      }
+
+      // ── Victory ──
+
+      function finishGame() {
+        stopTimer();
+        var s = game.getState();
+        var elapsed = game.getElapsed();
+
+        // Save run
+        history.save({
+          start: s.startArticle,
+          target: s.targetArticle,
+          clicks: s.clickCount,
+          time: elapsed,
+          pathLength: s.path.length,
+          date: new Date().toISOString()
+        });
+
+        // Render victory screen
+        showScreen('victory');
+        document.getElementById('v-time').textContent = formatTime(elapsed);
+        document.getElementById('v-clicks').textContent = s.clickCount;
+        document.getElementById('v-path-length').textContent = s.path.length;
+
+        var pathOl = document.getElementById('v-path');
+        pathOl.innerHTML = s.path.map(function(title) {
+          return '<li>' + escapeHTML(title) + '</li>';
+        }).join('');
+      }
+
+      // ── History rendering ──
+
+      function renderHistory() {
+        var runs = history.getAll();
+        if (!runs.length) {
+          historySection.style.display = 'none';
+          return;
+        }
+        historySection.style.display = '';
+        historyList.innerHTML = runs.map(function(run) {
+          return '<div class="history-item">' +
+            '<span class="history-route">' + escapeHTML(run.start) + ' &rarr; ' + escapeHTML(run.target) + '</span>' +
+            '<span class="history-stats">' + formatTime(run.time) + ' &middot; ' + run.clicks + ' clicks</span>' +
+          '</div>';
+        }).join('');
+      }
+
+      // ── Menu reset ──
+
+      function resetMenu() {
+        selectedStart = null;
+        selectedEnd = null;
+        startSearch.clear();
+        endSearch.clear();
+        startSel.textContent = '';
+        endSel.textContent = '';
+        startBtn.disabled = true;
+        renderHistory();
+      }
+
+      // ── Boot ──
+      showScreen('menu');
+      renderHistory();
+    }
+
+    // Start
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>

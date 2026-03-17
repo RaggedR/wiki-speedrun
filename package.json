@@ -1,0 +1,13 @@
+{
+  "name": "wiki-speedrun",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Navigate from one Wikipedia article to another by clicking links — race the clock!",
+  "scripts": {
+    "test": "npx playwright test",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
